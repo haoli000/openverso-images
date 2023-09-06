@@ -1,6 +1,6 @@
 FROM debian:bullseye as builder
 
-ARG version=2.0.18
+ARG version=2.0.18-roaming
 ENV VERSION=$version
 
 LABEL org.opencontainers.image.authors="Carlos Giraldo <cgiraldo@gradiant.org>" \
@@ -41,24 +41,21 @@ RUN apt-get update && \
         wget && \
     apt-get clean
 
-RUN	mkdir -p /opt/open5gs && cd /tmp && git clone https://github.com/open5gs/open5gs && \
+RUN	mkdir -p /opt/open5gs && cd /tmp && git clone https://github.com/haoli000/open5gs && \
 	cd open5gs && \
-    if [ "$VERSION" = "dev" ]; then \
-      git checkout main; \
-      wget https://api.github.com/repos/open5gs/open5gs/git/refs/heads/main -O /open5gs-ver.json; \
-    else \
-      git checkout v$VERSION; \
-      wget https://api.github.com/repos/open5gs/open5gs/git/refs/tags/v$VERSION -O /open5gs-ver.json; \
-    fi && \
+    git checkout roaming-tier2; \
+    wget https://api.github.com/repos/haoli000/open5gs/git/refs/heads/roaming-tier2 -O /open5gs-ver.json; \
     meson  build --prefix=/opt/open5gs && \
     ln -s /opt/open5gs/subprojects/ /opt/open5gs/../subprojects && \
-    ninja -C build install
+    ninja -C build install && \
+    cp -pr build /opt/open5gs/
 
 
 RUN apt-get update && apt-get install -y net-tools iputils-ping iproute2 dnsutils gettext-base iptables
 
 ## Replace default config values to work in containers (use dev eth0 and reference other containers by name)
 COPY configs/open5gs/* /opt/open5gs/etc/open5gs/
+COPY configs/freeDiameter/* /opt/open5gs/etc/freeDiameter/
 
 FROM debian:bullseye-slim
 
